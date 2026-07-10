@@ -871,11 +871,11 @@ var SEARCH_SYNONYMS = {
   '11.0': ['11.0', '11.0mm', '11mm'],
   '12.7': ['12.7', '12.7mm'],
   '15.8': ['15.8', '15.8mm'],
-  '4x2': ['4x2', '4"x2"', '4 x 2', '4\'\'x2\'\''],
-  '4x4': ['4x4', '4"x4"', '4 x 4'],
-  '6x2': ['6x2', '6"x2"', '6 x 2'],
-  '6x4': ['6x4', '6"x4"', '6 x 4'],
-  '8x6': ['8x6', '8"x6"', '8 x 6'],
+  '4x2': ['4x2', '4 x 2'],
+  '4x4': ['4x4', '4 x 4'],
+  '6x2': ['6x2', '6 x 2'],
+  '6x4': ['6x4', '6 x 4'],
+  '8x6': ['8x6', '8 x 6'],
   '10x6': ['10x6', '10"x6"', '10 x 6'],
   '10x3': ['10x3', '10"x3"', '10 x 3'],
   '12x7': ['12x7', '12"x7"', '12 x 7'],
@@ -971,21 +971,43 @@ function normalizeText(text) {
   return text.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[''""`´]/g, "'")
+    // Normalizar dimensiones: convertir "x" con comillas a x simple
+    .replace(/(\d)['"]?\s*x\s*['"]?(\d)/g, '$1x$2')
+    // Normalizar pulgadas: convertir comillas después de número a nada (para búsqueda)
+    .replace(/(\d)['"]/g, '$1')
+    // Normalizar guiones en fracciones
+    .replace(/(\d)\s*-\s*(\d)/g, '$1-$2')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
 function expandToken(token) {
+  var normToken = normalizeText(token);
+  
   // Buscar en sinónimos
-  const normToken = normalizeText(token);
   for (var key in SEARCH_SYNONYMS) {
     var synonyms = SEARCH_SYNONYMS[key];
     for (var i = 0; i < synonyms.length; i++) {
       if (normalizeText(synonyms[i]) === normToken) {
+        // Devolver todas las variantes normalizadas
         return synonyms.map(function(s) { return normalizeText(s); });
       }
     }
   }
+  
+  // Si no está en sinónimos, buscar si algún sinónimo contiene el token
+  var matches = [];
+  for (var key2 in SEARCH_SYNONYMS) {
+    var synonyms2 = SEARCH_SYNONYMS[key2];
+    for (var j = 0; j < synonyms2.length; j++) {
+      if (normalizeText(synonyms2[j]).includes(normToken)) {
+        matches.push(normalizeText(key2));
+        break;
+      }
+    }
+  }
+  
+  if (matches.length > 0) return matches;
   return [normToken];
 }
 
@@ -1008,6 +1030,7 @@ function getSearchTokens(query) {
 }
 
 function productMatches(product, tokens) {
+  // Normalizar el producto completo para búsqueda
   var codeNorm = normalizeText(product.code);
   var descNorm = normalizeText(product.description);
   var catNorm = normalizeText(product.category);
@@ -1015,19 +1038,16 @@ function productMatches(product, tokens) {
   
   // Cada token debe coincidir en alguna parte
   return tokens.every(function(token) {
+    // Coincidencia directa
     if (fullText.includes(token)) return true;
     
-    // Sin guiones
+    // Token sin guiones (para "1-1/2" buscando "1 1/2")
     var noHyphen = token.replace(/-/g, ' ');
     if (noHyphen !== token && fullText.includes(noHyphen)) return true;
     
-    // Sin espacios entre números y x
-    var compactDim = token.replace(/(\d)\s*x\s*(\d)/g, '$1x$2');
-    if (compactDim !== token && fullText.includes(compactDim)) return true;
-    
-    // Con espacios entre números y x
-    var spacedDim = token.replace(/(\d)x(\d)/g, '$1 x $2');
-    if (spacedDim !== token && fullText.includes(spacedDim)) return true;
+    // Token con guiones (para "1 1/2" buscando "1-1/2")
+    var withHyphen = token.replace(/\s+/g, '-');
+    if (withHyphen !== token && fullText.includes(withHyphen)) return true;
     
     return false;
   });
