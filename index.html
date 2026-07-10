@@ -969,19 +969,37 @@ function normalizeText(text) {
     .trim();
 }
 
-function expandToken(token) {
+  function getRelatedTerms(token) {
   var normToken = normalizeText(token);
+  var related = [normToken];
   
-  // Buscar en sinónimos
   for (var key in SEARCH_SYNONYMS) {
     var synonyms = SEARCH_SYNONYMS[key];
-    for (var i = 0; i < synonyms.length; i++) {
-      if (normalizeText(synonyms[i]) === normToken) {
-        // Devolver todas las variantes normalizadas
-        return synonyms.map(function(s) { return normalizeText(s); });
+    var normKey = normalizeText(key);
+    
+    if (normKey === normToken) {
+      for (var i = 0; i < synonyms.length; i++) {
+        var s = normalizeText(synonyms[i]);
+        if (related.indexOf(s) === -1) related.push(s);
+      }
+      return related;
+    }
+    
+    for (var j = 0; j < synonyms.length; j++) {
+      if (normalizeText(synonyms[j]) === normToken) {
+        if (related.indexOf(normKey) === -1) related.push(normKey);
+        for (var k = 0; k < synonyms.length; k++) {
+          var s2 = normalizeText(synonyms[k]);
+          if (related.indexOf(s2) === -1) related.push(s2);
+        }
+        return related;
       }
     }
   }
+  
+  return related;
+}
+
   
   // Si no está en sinónimos, buscar si algún sinónimo contiene el token
   var matches = [];
@@ -1003,68 +1021,63 @@ function getSearchTokens(query) {
   var normalized = normalizeText(query);
   var rawTokens = normalized.split(/\s+/).filter(function(t) { return t.length > 0; });
   
-  var allTokens = [];
+  var tokenGroups = [];
   rawTokens.forEach(function(token) {
-    var expanded = expandToken(token);
-    allTokens = allTokens.concat(expanded);
+    tokenGroups.push(getRelatedTerms(token));
   });
   
-  // Eliminar duplicados
-  var unique = [];
-  allTokens.forEach(function(t) {
-    if (unique.indexOf(t) === -1) unique.push(t);
-  });
-  return unique;
+  return tokenGroups;
 }
 
-function productMatches(product, tokens) {
-  // Normalizar el producto completo para búsqueda
+function productMatches(product, tokenGroups) {
   var codeNorm = normalizeText(product.code);
   var descNorm = normalizeText(product.description);
   var catNorm = normalizeText(product.category);
   var fullText = codeNorm + ' ' + descNorm + ' ' + catNorm;
   
-  // Cada token debe coincidir en alguna parte
-  return tokens.every(function(token) {
-    // Coincidencia directa
-    if (fullText.includes(token)) return true;
-    
-    // Token sin guiones (para "1-1/2" buscando "1 1/2")
-    var noHyphen = token.replace(/-/g, ' ');
-    if (noHyphen !== token && fullText.includes(noHyphen)) return true;
-    
-    // Token con guiones (para "1 1/2" buscando "1-1/2")
-    var withHyphen = token.replace(/\s+/g, '-');
-    if (withHyphen !== token && fullText.includes(withHyphen)) return true;
-    
-    return false;
+  return tokenGroups.every(function(group) {
+    return group.some(function(token) {
+      if (!token) return false;
+      
+      if (fullText.includes(token)) return true;
+      
+      var noHyphen = token.replace(/-/g, ' ');
+      if (noHyphen !== token && fullText.includes(noHyphen)) return true;
+      
+      var withHyphen = token.replace(/\s+/g, '-');
+      if (withHyphen !== token && fullText.includes(withHyphen)) return true;
+      
+      return false;
+    });
   });
 }
 
-function scoreProduct(product, tokens) {
+function scoreProduct(product, tokenGroups) {
   var score = 0;
   var codeNorm = normalizeText(product.code);
   var descNorm = normalizeText(product.description);
   var catNorm = normalizeText(product.category);
   
-  tokens.forEach(function(token) {
-    // Coincidencia exacta en código
-    if (codeNorm === token) score += 1000;
-    else if (codeNorm.startsWith(token + ' ') || codeNorm.startsWith(token + '-')) score += 500;
-    else if (codeNorm.includes(token)) score += 300;
-    
-    // Coincidencia en descripción
-    if (descNorm.startsWith(token + ' ')) score += 400;
-    else if (descNorm.includes(' ' + token + ' ')) score += 250;
-    else if (descNorm.includes(token)) score += 100;
-    
-    // Coincidencia en categoría
-    if (catNorm === token) score += 200;
-    else if (catNorm.includes(token)) score += 80;
-    
-    // Palabra completa en descripción
-    var wordBound = new RegExp('\\b' + token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-    if (wordBound.test(descNorm)) score += 50;
+  tokenGroups.forEach(function(group) {
+    group.forEach(function(token) {
+      if (!token) return;
+      
+      if (codeNorm === token) score += 1000;
+      else if (codeNorm.startsWith(token + ' ') || codeNorm.startsWith(token + '-')) score += 500;
+      else if (codeNorm.includes(token)) score += 300;
+      
+      if (descNorm.startsWith(token + ' ')) score += 400;
+      else if (descNorm.includes(' ' + token + ' ')) score += 250;
+      else if (descNorm.includes(token)) score += 100;
+      
+      if (catNorm === token) score += 200;
+      else if (catNorm.includes(token)) score += 80;
+      
+      try {
+        var wordBound = new RegExp('\\b' + token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (wordBound.test(descNorm)) score += 50;
+      } catch(e) {}
+    });
   });
   
   return score;
@@ -1079,22 +1092,20 @@ document.getElementById('searchInput').addEventListener('input', function(e) {
     return;
   }
   
-  var tokens = getSearchTokens(rawQuery);
+  var tokenGroups = getSearchTokens(rawQuery);
   
-  if (tokens.length === 0) {
+  if (tokenGroups.length === 0) {
     filteredProducts = allProducts.slice();
     renderProducts();
     return;
   }
   
-  // Filtrar productos que coincidan con TODOS los tokens
   var matches = allProducts.filter(function(p) {
-    return productMatches(p, tokens);
+    return productMatches(p, tokenGroups);
   });
   
-  // Ordenar por relevancia
   matches.sort(function(a, b) {
-    return scoreProduct(b, tokens) - scoreProduct(a, tokens);
+    return scoreProduct(b, tokenGroups) - scoreProduct(a, tokenGroups);
   });
   
   filteredProducts = matches;
