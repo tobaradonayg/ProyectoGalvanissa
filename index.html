@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Adonay Tobar — Catalogo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #1a1a1e;
+    --surface-hover: #222228;
+    --border: #2a2a30;
+    --text: #f0f0f5;
+    --text-secondary: #a0a0b0;
+    --text-muted: #606070;
+    --accent: #e8e8f0;
+    --accent-bg: #2a2a35;
+    --success: #4ade80;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scrollbar-width: none; -ms-overflow-style: none; }
+  html::-webkit-scrollbar { display: none; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  body::-webkit-scrollbar { display: none; }
+
+  /* HEADER */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,15,17,0.95); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border); padding: 12px 14px;
+  }
+  .header-inner {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.3px; }
+  .logo span { color: var(--text-secondary); font-weight: 400; }
+  .header-actions { display: flex; gap: 8px; }
+  .header-btn {
+    position: relative;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 14px; border-radius: var(--radius-sm);
+    font-size: 0.85rem; cursor: pointer; transition: all 0.15s;
+  }
+  .header-btn:active { transform: scale(0.96); }
+  .header-btn .badge {
+    position: absolute; top: -5px; right: -5px;
+    background: var(--danger); color: #fff; font-size: 0.65rem;
+    font-weight: 700; width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* SEARCH */
+  .search-section { padding: 12px 14px 8px; }
+  .search-box { position: relative; }
+  .search-box input {
+    width: 100%; padding: 14px 16px 14px 44px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text); font-size: 0.95rem;
+    outline: none;
+  }
+  .search-box input::placeholder { color: var(--text-muted); }
+  .search-icon {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); font-size: 1rem;
+  }
+  .search-meta {
+    display: flex; justify-content: space-between;
+    margin-top: 8px; padding: 0 2px;
+    font-size: 0.78rem; color: var(--text-muted);
+  }
+
+  /* LOADING */
+  .loading { text-align: center; padding: 48px 16px; color: var(--text-muted); }
+  .loading-spinner {
+    width: 32px; height: 32px; border: 2.5px solid var(--border);
+    border-top-color: var(--text); border-radius: 50%;
+    animation: spin 0.7s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PRODUCT LIST */
+  .product-list { padding: 0 0 32px; }
+  .product-card {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 10px 14px; cursor: pointer; transition: background 0.15s;
+  }
+  .product-card:first-child { border-top: 1px solid var(--border); }
+  .product-card:active { background: var(--surface-hover); }
+  .product-top {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    margin-bottom: 4px;
+  }
+  .product-code {
+    font-family: 'SF Mono', monospace; font-size: 0.78rem; font-weight: 600;
+    color: var(--accent); background: var(--accent-bg);
+    padding: 3px 8px; border-radius: 5px; letter-spacing: 0.3px;
+    user-select: all; cursor: copy; flex-shrink: 0;
+  }
+  .product-code.copied { background: rgba(74,222,128,0.15); color: var(--success); }
+  .product-price { font-size: 1rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+  .product-desc {
+    font-size: 0.88rem; color: var(--text-secondary); line-height: 1.35;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .product-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-action {
+    flex: 1; padding: 9px 0; border-radius: var(--radius-sm);
+    font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .btn-action:active { transform: scale(0.97); opacity: 0.85; }
+  .btn-action.lista {
+    background: transparent; color: var(--warning);
+    border: 1px solid rgba(251,191,36,0.3);
+  }
+  .btn-action.lista.added {
+    background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.5);
+  }
+  .btn-action.carrito {
+    background: transparent; color: var(--success);
+    border: 1px solid rgba(74,222,128,0.3);
+  }
+  .btn-action.carrito.added {
+    background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.5);
+  }
+
+  /* NO RESULTS */
+  .no-results { text-align: center; padding: 48px 16px; color: var(--text-muted); }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    padding: 12px 20px; border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 500;
+    z-index: 200; opacity: 0; transition: all 0.25s ease; display: flex; align-items: center; gap: 8px;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--success); }
+  .toast.warning { border-color: var(--warning); }
+
+  /* MODAL - VER PRECIOS */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200;
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .modal-overlay.active { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0; width: 100%; height: 100vh;
+    overflow-y: auto; padding: 20px 16px 28px;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .modal::-webkit-scrollbar { display: none; }
+  .modal-overlay.active .modal { transform: translateY(0); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-title { font-size: 1.1rem; font-weight: 700; line-height: 1.3; padding-right: 12px; }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); cursor: pointer; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .modal-code {
+    font-family: monospace; font-size: 0.85rem; background: var(--accent-bg);
+    padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; cursor: copy;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-desc { color: var(--text-secondary); margin-bottom: 16px; font-size: 0.9rem; }
+  .discounts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .discount-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px 6px; text-align: center;
+  }
+  .discount-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .discount-pct { font-size: 1.1rem; font-weight: 800; color: var(--warning); }
+  .discount-price { font-size: 0.85rem; font-weight: 700; margin-top: 2px; }
+  .discount-original { font-size: 0.68rem; color: var(--text-muted); text-decoration: line-through; }
+
+  /* MODAL - ELEGIR DESCUENTO */
+  .discount-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+  .discount-option {
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px 10px; text-align: center;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .discount-option:active { transform: scale(0.97); }
+  .discount-option.selected { border-color: var(--success); background: rgba(74,222,128,0.08); }
+  .discount-option .opt-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .discount-option .opt-pct { font-size: 1.1rem; font-weight: 800; }
+  .discount-option .opt-price { font-size: 0.9rem; font-weight: 700; margin-top: 2px; }
+  .discount-option .opt-original { font-size: 0.72rem; color: var(--text-muted); text-decoration: line-through; }
+  .modal-confirm-btn {
+    width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm);
+    background: var(--text); color: var(--bg); font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .modal-confirm-btn:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* MODAL - CANTIDAD / METROS */
+  .quantity-section { margin-bottom: 16px; }
+  .quantity-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; }
+  .quantity-input-wrapper {
+    display: flex; align-items: center; justify-content: center; gap: 0;
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden;
+  }
+  .qty-btn {
+    width: 48px; height: 48px; border: none; background: var(--surface);
+    color: var(--text); font-size: 1.3rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s; user-select: none;
+  }
+  .qty-btn:active { background: var(--surface-hover); }
+  .qty-input {
+    width: 100px; height: 48px; border: none; background: var(--bg);
+    color: var(--text); font-size: 1.1rem; font-weight: 700; text-align: center;
+    outline: none; -moz-appearance: textfield;
+  }
+  .qty-input::-webkit-outer-spin-button,
+  .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .qty-unit { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 6px; }
+  .qty-subtotal {
+    text-align: center; margin-top: 12px; padding: 10px;
+    background: var(--accent-bg); border-radius: var(--radius-sm);
+  }
+  .qty-subtotal-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; }
+  .qty-subtotal-price { font-size: 1.2rem; font-weight: 800; color: var(--success); }
+
+  /* SIDEBARS */
+  .sidebar-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 160;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .sidebar-overlay.active { opacity: 1; pointer-events: all; }
+  .sidebar {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 400px;
+    background: var(--surface); border-left: 1px solid var(--border); z-index: 161;
+    transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; flex-direction: column;
+  }
+  .sidebar.active { transform: translateX(0); }
+  .sidebar-header {
+    padding: 16px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .sidebar-header h2 { font-size: 1rem; }
+  .sidebar-close { background: none; border: none; color: var(--text); font-size: 1.3rem; cursor: pointer; }
+  .sidebar-items { flex: 1; overflow-y: auto; padding: 12px 16px; scrollbar-width: none; -ms-overflow-style: none; }
+  .sidebar-items::-webkit-scrollbar { display: none; }
+  .sidebar-item {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.15s;
+  }
+  .sidebar-item:active { background: var(--surface-hover); }
+  .sidebar-item-info { flex: 1; min-width: 0; padding-right: 8px; }
+  .sidebar-item-code { font-family: monospace; font-size: 0.75rem; color: var(--text-muted); }
+  .sidebar-item-desc { font-size: 0.85rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-item-discount { font-size: 0.7rem; color: var(--warning); margin-top: 2px; }
+  .sidebar-item-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+  .sidebar-item-price-col { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .sidebar-item-price { font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+  .sidebar-item-remove { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem; padding: 2px; }
+
+  /* Cantidad en sidebar carrito */
+  .cart-qty-controls {
+    display: flex; align-items: center; gap: 0;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden;
+  }
+  .cart-qty-btn {
+    width: 28px; height: 28px; border: none; background: transparent;
+    color: var(--text); font-size: 1rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s; user-select: none;
+  }
+  .cart-qty-btn:active { background: var(--surface-hover); }
+  .cart-qty-value {
+    width: 36px; height: 28px; border: none; background: transparent;
+    color: var(--text); font-size: 0.85rem; font-weight: 700; text-align: center;
+    outline: none; -moz-appearance: textfield;
+  }
+  .cart-qty-value::-webkit-outer-spin-button,
+  .cart-qty-value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .sidebar-empty { text-align: center; padding: 48px 16px; color: var(--text-muted); }
+  .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
+  .sidebar-total { display: flex; justify-content: space-between; font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+  .sidebar-share {
+    width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm);
+    background: #25D366; color: #fff; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: opacity 0.15s;
+  }
+  .sidebar-share:active { opacity: 0.85; }
+  .sidebar-share:disabled { opacity: 0.35; cursor: not-allowed; }
+  .sidebar-copy {
+    width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: transparent; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; margin-bottom: 10px; transition: all 0.15s;
+  }
+  .sidebar-copy:active { background: var(--surface-hover); }
+
+  @media (min-width: 640px) {
+    .header { padding: 14px 24px; }
+    .search-section { padding: 16px 24px 10px; }
+    .product-card { padding: 12px 20px; }
+    .modal { border-radius: var(--radius); margin: auto 16px; max-height: 90vh; height: auto; }
+  }
+</style>
+<base target="_blank">
+<base target="_blank">
+<base target="_blank">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">Adonay <span>Tobar</span></div>
+    <div class="header-actions">
+      <button class="header-btn" onclick="openSidebar('lista')">
+        Lista
+        <span class="badge" id="listaCount" style="display:none">0</span>
+      </button>
+      <button class="header-btn" onclick="openSidebar('carrito')">
+        Carrito
+        <span class="badge" id="carritoCount" style="display:none">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="search-section">
+  <div class="search-box">
+    <span class="search-icon">&#128269;</span>
+    <input type="text" id="searchInput" placeholder="Buscar: polin 4x2, tubo cuad 1, angulo ght..." autocomplete="off">
+  </div>
+  <div class="search-meta">
+    <span id="resultCount">Cargando productos...</span>
+    <span id="lastUpdate"></span>
+  </div>
+</section>
+
+<main class="product-list" id="productList">
+  <div class="loading">
+    <div class="loading-spinner"></div>
+    <p>Cargando catalogo...</p>
+  </div>
+</main>
+
+<div class="toast" id="toast">
+  <span id="toastIcon">&#10003;</span>
+  <span id="toastMsg">Mensaje</span>
+</div>
+
+<!-- MODAL VER PRECIOS -->
+<div class="modal-overlay" id="priceModal" onclick="closePriceModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="priceModalTitle">Producto</div>
+      <button class="modal-close" onclick="closePriceModal()">&#10005;</button>
+    </div>
+    <div class="modal-code" id="priceModalCode" onclick="copyCode(this)">
+      <span id="priceModalCodeText">COD-001</span>
+      <span>Copiar</span>
+    </div>
+    <div class="modal-desc" id="priceModalDesc">Descripcion</div>
+    <div style="margin-bottom: 10px; font-size: 0.8rem; color: var(--text-muted);">Precios con descuento:</div>
+    <div class="discounts-grid">
+      <div class="discount-card"><div class="discount-label">Normal</div><div class="discount-pct" style="color:var(--text)">-</div><div class="discount-price" id="viewPrice0"></div></div>
+      <div class="discount-card"><div class="discount-label">3%</div><div class="discount-original" id="viewOrig3"></div><div class="discount-price" id="viewPrice3"></div></div>
+      <div class="discount-card"><div class="discount-label">4%</div><div class="discount-original" id="viewOrig4"></div><div class="discount-price" id="viewPrice4"></div></div>
+      <div class="discount-card"><div class="discount-label">5%</div><div class="discount-original" id="viewOrig5"></div><div class="discount-price" id="viewPrice5"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ELEGIR DESCUENTO (compartido para Lista, Carrito y Edicion) -->
+<div class="modal-overlay" id="discountModal" onclick="closeDiscountModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="discountModalTitle">Agregar</div>
+      <button class="modal-close" onclick="closeDiscountModal()">&#10005;</button>
+    </div>
+    <div class="modal-code" id="discountModalCode" onclick="copyCode(this)">
+      <span id="discountModalCodeText">COD-001</span>
+      <span>Copiar</span>
+    </div>
+    <div class="modal-desc" id="discountModalDesc">Descripcion</div>
+    <div style="margin-bottom: 10px; font-size: 0.8rem; color: var(--text-muted);">Selecciona el precio:</div>
+    <div class="discount-options">
+      <div class="discount-option" data-discount="0" onclick="selectDiscount(0)"><div class="opt-label">Precio normal</div><div class="opt-pct" style="color:var(--text)">-</div><div class="opt-price" id="optPrice0"></div></div>
+      <div class="discount-option" data-discount="3" onclick="selectDiscount(3)"><div class="opt-label">Descuento</div><div class="opt-pct" style="color:var(--warning)">3%</div><div class="opt-original" id="optOrig3"></div><div class="opt-price" id="optPrice3"></div></div>
+      <div class="discount-option" data-discount="4" onclick="selectDiscount(4)"><div class="opt-label">Descuento</div><div class="opt-pct" style="color:var(--warning)">4%</div><div class="opt-original" id="optOrig4"></div><div class="opt-price" id="optPrice4"></div></div>
+      <div class="discount-option" data-discount="5" onclick="selectDiscount(5)"><div class="opt-label">Descuento</div><div class="opt-pct" style="color:var(--warning)">5%</div><div class="opt-original" id="optOrig5"></div><div class="opt-price" id="optPrice5"></div></div>
+    </div>
+
+    <!-- SECCION CANTIDAD (visible para todos los codigos EXCEPTO los que empiezan con 12) -->
+    <div class="quantity-section" id="quantitySection" style="display:none">
+      <div class="quantity-label">Cantidad:</div>
+      <div class="quantity-input-wrapper">
+        <button class="qty-btn" onclick="changeQty(-1)">&#8722;</button>
+        <input type="number" class="qty-input" id="qtyInput" value="1" min="1" onchange="updateQtySubtotal()">
+        <button class="qty-btn" onclick="changeQty(1)">+</button>
+      </div>
+      <div class="qty-unit">unidades</div>
+      <div class="qty-subtotal">
+        <div class="qty-subtotal-label">Subtotal</div>
+        <div class="qty-subtotal-price" id="qtySubtotal">$0.00</div>
+      </div>
+    </div>
+
+    <!-- SECCION METROS (solo visible para codigos que empiezan con 12) -->
+    <div class="quantity-section" id="metersSection" style="display:none">
+      <div class="quantity-label">Metros:</div>
+      <div class="quantity-input-wrapper" style="border:none; background:transparent;">
+        <input type="number" class="qty-input" id="metersInput" value="1" min="0.01" step="0.01" onchange="updateMetersSubtotal()" style="width:100%; border:1.5px solid var(--border); border-radius:var(--radius-sm);">
+      </div>
+      <div class="qty-unit">metros (ej: 144.98, 300.89)</div>
+      <div class="qty-subtotal">
+        <div class="qty-subtotal-label">Subtotal</div>
+        <div class="qty-subtotal-price" id="metersSubtotal">$0.00</div>
+      </div>
+    </div>
+
+    <button class="modal-confirm-btn" id="discountConfirmBtn" onclick="confirmDiscount()">Confirmar</button>
+  </div>
+</div>
+
+<!-- SIDEBAR LISTA -->
+<div class="sidebar-overlay" id="listaOverlay" onclick="closeSidebar('lista')"></div>
+<aside class="sidebar" id="listaSidebar">
+  <div class="sidebar-header"><h2>Lista de Precios</h2><button class="sidebar-close" onclick="closeSidebar('lista')">&#10005;</button></div>
+  <div class="sidebar-items" id="listaItems"><div class="sidebar-empty">Tu lista esta vacia</div></div>
+  <div class="sidebar-footer">
+    <button class="sidebar-copy" id="listaCopyBtn" onclick="copyListaToClipboard()">Copiar lista al portapapeles</button>
+    <div class="sidebar-total"><span>Total:</span><span id="listaTotal">$0.00</span></div>
+    <button class="sidebar-share" id="listaShareBtn" onclick="shareListaWhatsApp()" disabled>Compartir por WhatsApp</button>
+  </div>
+</aside>
+
+<!-- SIDEBAR CARRITO -->
+<div class="sidebar-overlay" id="carritoOverlay" onclick="closeSidebar('carrito')"></div>
+<aside class="sidebar" id="carritoSidebar">
+  <div class="sidebar-header"><h2>Carrito</h2><button class="sidebar-close" onclick="closeSidebar('carrito')">&#10005;</button></div>
+  <div class="sidebar-items" id="carritoItems"><div class="sidebar-empty">Tu carrito esta vacio</div></div>
+  <div class="sidebar-footer">
+    <div class="sidebar-total"><span>Total:</span><span id="carritoTotal">$0.00</span></div>
+    <button class="sidebar-share" id="carritoShareBtn" onclick="shareCarritoWhatsApp()" disabled>Compartir por WhatsApp</button>
+  </div>
+</aside>
+
+<script>
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT8XYpMQEshg2eZghit9nFFjIiRz8_G_PHnlOlYWmsX9kzrN1CH7v_FQE0ciZnU8Va4AZofLfJvm4KF/pub?output=csv';
+
+let allProducts = [];
+let filteredProducts = [];
+let lista = JSON.parse(localStorage.getItem('adonay_lista') || '[]');
+let carrito = JSON.parse(localStorage.getItem('adonay_carrito') || '[]');
+let currentDiscountProduct = null;
+let selectedDiscount = 0;
+let currentMode = 'carrito';
+let currentQty = 1;
+let currentMeters = 1;
+let editingIndex = -1;
+
+function formatPrice(n) {
+  const num = typeof n === 'number' ? n : parseFloat(String(n).replace(/[$,]/g, '').trim());
+  if (isNaN(num)) return '$0.00';
+  return '$' + num.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = type === 'success' ? '✓' : type === 'warning' ? '⚡' : 'ℹ';
+  toast.className = 'toast show ' + (type || '');
+  setTimeout(function() { toast.classList.remove('show'); }, 2200);
+}
+
+function copyToClipboard(text, el) {
+  navigator.clipboard.writeText(text).then(function() {
+    if (el) { el.classList.add('copied'); setTimeout(function() { el.classList.remove('copied'); }, 1200); }
+    showToast('Codigo copiado: ' + text, 'success');
+  }).catch(function() {
+    const ta = document.createElement('textarea'); ta.value = text;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    if (el) { el.classList.add('copied'); setTimeout(function() { el.classList.remove('copied'); }, 1200); }
+    showToast('Codigo copiado: ' + text, 'success');
+  });
+}
+
+function copyCode(el) {
+  copyToClipboard(el.querySelector('span:first-child').textContent, el);
+}
+
+// ========== CARGAR CON PAPAPARSE ==========
+async function loadProducts() {
+  try {
+    const response = await fetch(SHEET_URL + '&t=' + Date.now());
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const csvText = await response.text();
+
+    if (typeof Papa === 'undefined') {
+      console.warn('PapaParse no cargado, usando parser manual');
+      parseCSVManual(csvText);
+      return;
+    }
+
+    Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: function(h) {
+        return h.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      },
+      complete: function(results) {
+        console.log('PapaParse rows:', results.data.length);
+        if (results.data.length > 0) console.log('Headers:', Object.keys(results.data[0]));
+
+        allProducts = results.data.map(function(p, i) {
+          return {
+            id: i,
+            code: (p.codigo || p.code || p.sku || '').trim(),
+            description: (p.descripcion || p.desc || p.producto || p.nombre || '').trim(),
+            price: parseFloat(String(p.precio || p.price || p.costo || 0).replace(/[$,]/g, '')) || 0,
+            category: (p.categoria || p.category || p.tipo || 'Sin categoria').trim()
+          };
+        }).filter(function(p) { return p.code || p.description; });
+
+        console.log('Products loaded:', allProducts.length);
+        if (allProducts.length > 0) console.log('First:', allProducts[0]);
+
+        filteredProducts = allProducts.slice();
+        renderProducts();
+        updateListaUI();
+        updateCarritoUI();
+        document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-MX');
+      },
+      error: function(err) {
+        throw new Error('PapaParse error: ' + err.message);
+      }
+    });
+  } catch (err) {
+    console.error('Error cargando productos:', err);
+    document.getElementById('productList').innerHTML = `
+      <div class="no-results">
+        <p style="color:var(--danger);margin-bottom:8px">Error al cargar</p>
+        <p style="font-size:0.85rem">${err.message}</p>
+        <button onclick="loadProducts()" style="margin-top:16px;padding:10px 20px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;cursor:pointer">Reintentar</button>
+      </div>`;
+  }
+}
+
+function parseCSVManual(csvText) {
+  const lines = csvText.split('\n').filter(function(l) { return l.trim(); });
+  if (lines.length < 2) {
+    document.getElementById('productList').innerHTML = '<div class="no-results"><p>CSV vacio o invalido</p></div>';
+    return;
+  }
+  const headers = lines[0].split(',').map(function(h) { return h.trim().toLowerCase().replace(/[̀-ͯ]/g, ''); });
+  allProducts = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',');
+    const p = {};
+    headers.forEach(function(h, idx) { p[h] = values[idx] ? values[idx].trim() : ''; });
+    allProducts.push({
+      id: i - 1,
+      code: (p.codigo || p.code || p.sku || '').trim(),
+      description: (p.descripcion || p.desc || p.producto || p.nombre || '').trim(),
+      price: parseFloat(String(p.precio || p.price || p.costo || 0).replace(/[$,]/g, '')) || 0,
+      category: (p.categoria || p.category || p.tipo || 'Sin categoria').trim()
+    });
+  }
+  allProducts = allProducts.filter(function(p) { return p.code || p.description; });
+  filteredProducts = allProducts.slice();
+  renderProducts();
+  updateListaUI();
+  updateCarritoUI();
+  document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-MX');
+}
+
+function renderProducts() {
+  const container = document.getElementById('productList');
+  document.getElementById('resultCount').textContent = filteredProducts.length + ' producto' + (filteredProducts.length !== 1 ? 's' : '');
+
+  if (filteredProducts.length === 0) {
+    container.innerHTML = '<div class="no-results"><p>No se encontraron productos</p></div>';
+    return;
+  }
+
+  container.innerHTML = filteredProducts.map(function(p) {
+    const inLista = lista.some(function(c) { return c.id === p.id; });
+    const inCarrito = carrito.some(function(c) { return c.id === p.id; });
+    return `
+      <div class="product-card" onclick="openPriceModal(${p.id})">
+        <div class="product-top">
+          <div class="product-code" onclick="event.stopPropagation(); copyToClipboard('${p.code}', this)">${p.code || 'SIN CODIGO'}</div>
+          <div class="product-price">${formatPrice(p.price)}</div>
+        </div>
+        <div class="product-desc">${p.description || 'Sin descripcion'}</div>
+        <div class="product-actions">
+          <button class="btn-action lista ${inLista ? 'added' : ''}" onclick="event.stopPropagation(); openListaDiscountModal(${p.id})">${inLista ? 'En lista' : 'Lista'}</button>
+          <button class="btn-action carrito ${inCarrito ? 'added' : ''}" onclick="event.stopPropagation(); openDiscountModal(${p.id})">${inCarrito ? 'Agregado' : 'Carrito'}</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+  // ========== DICCIONARIO DE SINONIMOS ==========
+var SEARCH_SYNONYMS = {
+  'polin': ['polin', 'polin c', 'polin encaj', 'viga', 'viga encaj'],
+  'viga': ['viga', 'viga encaj', 'polin encaj', 'polin'],
+  'tubo': ['tubo', 'tubo est', 'tubo ind'],
+  'tubo est': ['tubo est', 'tubo'],
+  'tubo ind': ['tubo ind', 'tubo'],
+  'angulo': ['angulo', 'angulo ght', 'angulo g36'],
+  'platina': ['platina', 'platina ght', 'platina g36'],
+  'lamina': ['lam', 'lamina', 'lam ho', 'lam hierro'],
+  'hierro': ['hierro', 'hierro redondo', 'hierromax', 'ho', 'ho liso', 'ho corrugado', 'ho cuadrado'],
+  'hierromax': ['hierromax', 'hierro'],
+  'malla': ['malla', 'mallamax', 'malla max'],
+  'electrodo': ['electrodo', 'electrodo weldmax'],
+  'pintura': ['paint', 'pintura', 'esmalte', 'fast dry'],
+  'esmalte': ['esmalte', 'paint', 'pintura'],
+  'brocha': ['brocha'],
+  'tornillo': ['tornillo', 'tornillo autr'],
+  'grapa': ['grapa', 'grapa hierromax'],
+  'estribo': ['estribo', 'estribos'],
+  'grifa': ['grifa', 'grifa hierromax'],
+  'disco': ['disco', 'disco corte'],
+  'sierra': ['sierra', 'sierra acero'],
+  'alambre': ['alambre', 'alambre 16'],
+  'cerradura': ['cerradura', 'cerradura parche'],
+  'cerradura parche': ['cerradura parche', 'cerradura'],
+  'aislante': ['aislante', 'aislante terminco', 'prodex'],
+  'terminco': ['terminco', 'aislante', 'prodex', 'thermotechogfx', 'thermotecho'],
+  'thermotecho': ['thermotechogfx', 'thermotecho', 'terminco', 'aislante'],
+  'galvadeck': ['galvadeck', 'entrepiso', 'entrepiso galvadeck'],
+  'entrepiso': ['entrepiso', 'galvadeck', 'entrepiso galvadeck'],
+  'tela': ['tela', 'tela metalica', 'tela galva'],
+  'sunlight': ['sunlight', 'lamina sunlight'],
+  'remate': ['remate', 'remate lateral', 'remate inferior', 'remate superior'],
+  'botaguas': ['botaguas', 'botaguas lateral', 'botaguas fron'],
+  'cpte': ['cpte', 'componente'],
+  'mda': ['mda', 'a medida'],
+  'g80': ['g80', 'galvanizado 80'],
+  'g65': ['g65', 'galvanizado 65'],
+  'g36': ['g36', 'galvanizado 36'],
+  'ght': ['ght'],
+  'hrc': ['hrc'],
+  'crc': ['crc'],
+  'gfx': ['gfx'],
+  'cuad': ['cuad', 'cuadrado'],
+  'rect': ['rect', 'rectangular'],
+  'redo': ['redo', 'redondo'],
+  'rec': ['rec', 'rect', 'rectangular'],
+  'electrosoldada': ['electrosoldada', 'electro'],
+  'lisa': ['lisa', 'liso'],
+  'crgdo': ['crgdo', 'corrugado'],
+  'corrugado': ['corrugado', 'crgdo'],
+  'liso': ['liso', 'lisa'],
+  'rojo': ['rojo', 'rjo'],
+  'blanco': ['blanco', 'blc'],
+  'negro': ['negro'],
+  'gris': ['gris'],
+  'verde': ['verde'],
+  'plateado': ['plateado'],
+  'aluminio': ['aluminio', 'alum'],
+  'encaj': ['encaj', 'encajable', 'encaje'],
+  'comercial': ['com', 'comercial'],
+  'original': ['orig', 'original'],
+  'chapa': ['ch', 'chapa'],
+  'calibre': ['calibre', '#'],
+  'corte': ['corte', 'corte metal'],
+  'metal': ['metal'],
+  'acero': ['acero'],
+  'galvanizado': ['galvanizado', 'galva', 'galvadeck'],
+  'puerta': ['pu', 'puerta'],
+  'yale': ['yale'],
+  'e40': ['e40'],
+  'e25': ['e25'],
+  'c22': ['c22'],
+  'c20': ['c20'],
+  'c26': ['c26'],
+  'c24': ['c24'],
+  'c12.5': ['c12.5'],
+  'c11': ['c11'],
+  'ch14': ['ch14', 'calibre 14'],
+  'ch16': ['ch16', 'calibre 16'],
+  'ch18': ['ch18', 'calibre 18'],
+  'ch22': ['ch22', 'calibre 22'],
+  '#16': ['#16', 'numero 16', '1.35mm'],
+  '#18': ['#18', 'numero 18', '1.00mm'],
+  '1.35': ['1.35', '1.35mm', '#16'],
+  '1.00': ['1.00', '1.00mm', '#18'],
+  '1.20': ['1.20', '1.2', '1.20mm', 'ch18'],
+  '1.50': ['1.50', '1.5', '1.50mm', 'ch16'],
+  '1.80': ['1.80', '1.8', '1.80mm', 'ch14'],
+  '2.30': ['2.30', '2.3', '2.30mm'],
+  '2.70': ['2.70', '2.7', '2.70mm'],
+  '3.20': ['3.20', '3.2', '3.20mm'],
+  '3.60': ['3.60', '3.6', '3.60mm'],
+  '4.0': ['4.0', '4.0mm', '4mm'],
+  '4.7': ['4.7', '4.7mm', '4.70mm'],
+  'd2': ['d2', '4.04mm', 'd4.04'],
+  'd3a': ['d3a', '4.60mm', 'd4.60'],
+  'd4': ['d4', '5.72mm', 'd5.72'],
+  'd6': ['d6', '7.01mm', 'd7.01'],
+  'd11': ['d11', '9.5mm', 'd9.5'],
+  'd17': ['d17', '11.81mm', 'd11.81'],
+  'd24': ['d24', '14.04mm', 'd14.04'],
+  '3/8': ['3/8', '9.5mm', '9.5'],
+  '1/2': ['1/2', '12.7mm', '12.7'],
+  '5/8': ['5/8', '15.8mm', '15.8'],
+  '3/4': ['3/4'],
+  '1': ['1', '1"', '1 pulgada'],
+  '1 1/4': ['1 1/4', '1-1/4', '1.25'],
+  '1 1/2': ['1 1/2', '1-1/2', '1.5'],
+  '2': ['2', '2"', '2 pulgadas'],
+  '3': ['3', '3"', '3 pulgadas'],
+  '4': ['4', '4"', '4 pulgadas'],
+  '6': ['6', '6"', '6 pulgadas'],
+  '8': ['8', '8"', '8 pulgadas'],
+  '10': ['10', '10"', '10 pulgadas'],
+  '12': ['12', '12"', '12 pulgadas'],
+  '14': ['14', '14"', '14 pulgadas'],
+  '15': ['15', '15"', '15 pulgadas'],
+  '1.315': ['1.315', '1.315"'],
+  '1.660': ['1.660', '1.660"'],
+  '1.900': ['1.900', '1.900"'],
+  '2.375': ['2.375', '2.375"'],
+  '3.800': ['3.800', '3.800"'],
+  'welding': ['weld', 'weldmax', 'welding'],
+  'maxpaint': ['maxpaint', 'paint'],
+  'fast dry': ['fast dry', 'maxpaint'],
+  'a plus': ['a plus', 'a+', 'autr a plus'],
+  'autr': ['autr', 'autorroscante', 'tornillo autr'],
+  'perfil': ['perfil', 'perfil arquiteja'],
+  'arquiteja': ['arquiteja', 'perfil arquiteja'],
+  'espuma': ['espuma', 'sellador espuma'],
+  'sellador': ['sellador', 'sellador espuma'],
+  'eclipse': ['eclipse'],
+  'dronco': ['dronco'],
+  'villa': ['villa', 'vll'],
+  'vll': ['vll', 'villa'],
+  'com': ['com', 'comercial'],
+  'orig': ['orig', 'original'],
+  'mda': ['mda', 'a medida'],
+  'liso': ['liso', 'lisa'],
+  'corrugado': ['corrugado', 'crgdo'],
+  'cuadrado': ['cuadrado', 'cuad'],
+  'rectangular': ['rectangular', 'rect', 'rec'],
+  'redondo': ['redondo', 'redo'],
+  'electro': ['electro', 'electrosoldada'],
+  'p-63': ['p-63', 'p63'],
+  'c22': ['c22'],
+  'c20': ['c20'],
+  'c26': ['c26'],
+  'c24': ['c24'],
+  'e25': ['e25'],
+  'e40': ['e40'],
+  '10/10': ['10/10', '3.43mm'],
+  '6/6': ['6/6', '4.88mm'],
+  '4/4': ['4/4', '5.72mm'],
+  '9/9': ['9/9', '3.80mm'],
+  '3.43': ['3.43', '3.43mm', '10/10'],
+  '4.88': ['4.88', '4.88mm', '6/6'],
+  '5.72': ['5.72', '5.72mm', '4/4'],
+  '3.80': ['3.80', '3.80mm', '9/9'],
+  '6013': ['6013'],
+  '2.5': ['2.5', '2.5mm', '3/32'],
+  '3.2': ['3.2', '3.2mm', '1/8'],
+  '5.5': ['5.5', '5.5 lb'],
+  '11': ['11', '11 lb'],
+  '10mm': ['10mm', '10 mm'],
+  '5mm': ['5mm', '5 mm'],
+  '1.15': ['1.15', '1.15x30m'],
+  '30m': ['30m', '1.15x30m'],
+  'ff': ['ff'],
+  'derecha': ['derecha', 'drch', 'dch'],
+  'izquierda': ['izquierda', 'iqda', 'izq'],
+  'drch': ['drch', 'derecha'],
+  'iqda': ['iqda', 'izquierda'],
+  'c12.5': ['c12.5', '2.50mm'],
+  'c11': ['c11', '3.06mm'],
+  '2.50': ['2.50', '2.50mm', 'c12.5'],
+  '3.06': ['3.06', '3.06mm', 'c11'],
+  '30yd': ['30yd', '30 yardas', 'x30yd'],
+  '10 pie': ['10 pie', '10 pies'],
+  '12 pie': ['12 pie', '12 pies'],
+  '6.0': ['6.0', '6.0 mts', '6 metros'],
+  '4.0': ['4.0', '4.0 mts', '4 metros'],
+  '6 mts': ['6 mts', '6.0 mts', '6 metros'],
+  '4 mts': ['4 mts', '4.0 mts', '4 metros'],
+  '2.25': ['2.25', '2.25m', '2.25 m'],
+  '3m': ['3m', '3 m', '3 metros'],
+  '0.24': ['0.24', '0.24x3m', '0.24x2.25m'],
+  '0.80': ['0.80', '0.80mm', '0.8'],
+  '0.8': ['0.8', '0.80', '0.80mm'],
+  '0.4': ['0.4', '0.40'],
+  '0.3': ['0.3', '0.30'],
+  '0.55': ['0.55', '0.55/0.3'],
+  '5/16': ['5/16'],
+  '4 1/2': ['4 1/2', '4.5', '4-1/2'],
+  '5 1/2': ['5 1/2', '5.5', '5-1/2'],
+  'rojo oxido': ['rojo oxido', 'rojo oxido'],
+  'rojo': ['rojo', 'rjo'],
+  'blanco': ['blanco', 'blc'],
+  'mad': ['mad', 'madera'],
+  'madera': ['madera', 'mad'],
+  'pu': ['pu', 'puerta'],
+  'pdo': ['pdo', 'pintado'],
+  'pintado': ['pintado', 'pdo'],
+  'a medida': ['a medida', 'mda'],
+  'comercial': ['comercial', 'com'],
+  'original': ['original', 'orig'],
+  'astm': ['astm', 'astm a1064'],
+  'a1064': ['a1064', 'astm a1064'],
+  'g75': ['g75', 'grado 75'],
+  'g40': ['g40', 'grado 40'],
+  'grado 75': ['grado 75', 'g75'],
+  'grado 40': ['grado 40', 'g40'],
+  'grado 80': ['grado 80', 'g80'],
+  'grado 65': ['grado 65', 'g65'],
+  'grado 36': ['grado 36', 'g36'],
+  'chapa 14': ['chapa 14', 'ch14', 'calibre 14'],
+  'chapa 16': ['chapa 16', 'ch16', 'calibre 16'],
+  'chapa 18': ['chapa 18', 'ch18', 'calibre 18'],
+  'chapa 22': ['chapa 22', 'ch22', 'calibre 22'],
+  'calibre 14': ['calibre 14', 'ch14', 'chapa 14'],
+  'calibre 16': ['calibre 16', 'ch16', 'chapa 16'],
+  'calibre 18': ['calibre 18', 'ch18', 'chapa 18'],
+  'calibre 22': ['calibre 22', 'ch22', 'chapa 22'],
+  'numero 16': ['numero 16', '#16'],
+  'numero 18': ['numero 18', '#18'],
+  '1/16': ['1/16', '1.35mm', '1.50mm'],
+  '1/8': ['1/8', '3.17mm'],
+  '3/16': ['3/16', '4.7mm', '4.70mm'],
+  '1/4': ['1/4', '6.0mm', '6.35mm'],
+  '5/32': ['5/32'],
+  '7/64': ['7/64'],
+  '9/64': ['9/64'],
+  '3/32': ['3/32'],
+  '5/64': ['5/64'],
+  '1/32': ['1/32', '0.60mm', '0.6mm'],
+  '3/64': ['3/64', '0.90mm', '0.9mm', '1.00mm'],
+  '1.9': ['1.9', '1.90', '1.90mm'],
+  '2.3': ['2.3', '2.30', '2.30mm'],
+  '2.7': ['2.7', '2.70', '2.70mm'],
+  '3.2': ['3.2', '3.20', '3.20mm'],
+  '3.6': ['3.6', '3.60', '3.60mm'],
+  '4.0': ['4.0', '4.0mm', '4mm'],
+  '4.7': ['4.7', '4.7mm', '4.70mm'],
+  '6.0': ['6.0', '6.0mm', '6mm'],
+  '8.0': ['8.0', '8.0mm', '8mm'],
+  '9.5': ['9.5', '9.5mm'],
+  '11.0': ['11.0', '11.0mm', '11mm'],
+  '12.7': ['12.7', '12.7mm'],
+  '15.8': ['15.8', '15.8mm'],
+  '4x2': ['4x2', '4"x2"', '4 x 2', '4\'\'x2\'\''],
+  '4x4': ['4x4', '4"x4"', '4 x 4'],
+  '6x2': ['6x2', '6"x2"', '6 x 2'],
+  '6x4': ['6x4', '6"x4"', '6 x 4'],
+  '8x6': ['8x6', '8"x6"', '8 x 6'],
+  '10x6': ['10x6', '10"x6"', '10 x 6'],
+  '10x3': ['10x3', '10"x3"', '10 x 3'],
+  '12x7': ['12x7', '12"x7"', '12 x 7'],
+  '12x3.5': ['12x3.5', '12"x3-1/2"', '12 x 3-1/2'],
+  '14x8': ['14x8', '14"x8"', '14 x 8'],
+  '14x4': ['14x4', '14"x4"', '14 x 4'],
+  '15x8': ['15x8', '15"x8"', '15 x 8'],
+  '15x4': ['15x4', '15"x4"', '15 x 4'],
+  '3x2': ['3x2', '3"x2"', '3 x 2'],
+  '2x1': ['2x1', '2"x1"', '2 x 1'],
+  '4x1': ['4x1', '4"x1"', '4 x 1'],
+  '3/4x1/2': ['3/4x1/2', '3/4"x1/2"'],
+  '1x1/2': ['1x1/2', '1"x1/2"'],
+  '1x5/64': ['1x5/64', '1"x5/64"'],
+  '1x3/32': ['1x3/32', '1"x3/32"'],
+  '1x7/64': ['1x7/64', '1"x7/64"'],
+  '1x1/8': ['1x1/8', '1"x1/8"'],
+  '1-1/4x5/64': ['1-1/4x5/64', '1-1/4"x5/64"'],
+  '1-1/4x3/32': ['1-1/4x3/32', '1-1/4"x3/32"'],
+  '1-1/2x3/32': ['1-1/2x3/32', '1-1/2"x3/32"'],
+  '1-1/2x7/64': ['1-1/2x7/64', '1-1/2"x7/64"'],
+  '2x3/32': ['2x3/32', '2"x3/32"'],
+  '2x7/64': ['2x7/64', '2"x7/64"'],
+  '2x1/8': ['2x1/8', '2"x1/8"'],
+  '3x1/8': ['3x1/8', '3"x1/8"'],
+  '3x7/64': ['3x7/64', '3"x7/64"'],
+  '4x1/8': ['4x1/8', '4"x1/8"'],
+  '4x7/64': ['4x7/64', '4"x7/64"'],
+  '4x9/64': ['4x9/64', '4"x9/64"'],
+  '1/2x5/64': ['1/2x5/64', '1/2"x5/64"'],
+  '1/2x3/32': ['1/2x3/32', '1/2"x3/32"'],
+  '1-1/2x3/32': ['1-1/2x3/32', '1-1/2"x3/32"'],
+  '1x1/4': ['1x1/4', '1"x1/4"'],
+  '2x1m': ['2x1m', '2x1 m', '2 x 1 m'],
+  '10x10': ['10x10', '10x10cm'],
+  '10x20': ['10x20', '10x20cm'],
+  '10 cm': ['10 cm', '10cm', '10x10', '10x20'],
+  '20 cm': ['20 cm', '20cm', '10x20'],
+  '4.04': ['4.04', '4.04mm', 'd2'],
+  '4.60': ['4.60', '4.60mm', 'd3a'],
+  '5.72': ['5.72', '5.72mm', 'd4'],
+  '7.01': ['7.01', '7.01mm', 'd6'],
+  '9.5': ['9.5', '9.5mm', 'd11'],
+  '11.81': ['11.81', '11.81mm', 'd17'],
+  '14.04': ['14.04', '14.04mm', 'd24'],
+  '26.10': ['26.10', '$26.10'],
+  '33.56': ['33.56', '$33.56'],
+  '36.23': ['36.23', '$36.23'],
+  '38.06': ['38.06', '$38.06'],
+  '36.84': ['36.84', '$36.84'],
+  '42.02': ['42.02', '$42.02'],
+  '49.20': ['49.20', '$49.20'],
+  '49.90': ['49.90', '$49.90'],
+  '48.65': ['48.65', '$48.65'],
+  '6.59': ['6.59', '$6.59'],
+  '13.18': ['13.18', '$13.18'],
+  '30 un': ['30 un', '30 unidades'],
+  '14 un': ['14 un', '14 unidades'],
+  '8 un': ['8 un', '8 unidades'],
+  '5 un': ['5 un', '5 unidades'],
+  '5,5 lb': ['5,5 lb', '5.5 lb'],
+  '11 lb': ['11 lb', '11lb'],
+  'weldmax': ['weldmax', 'welding'],
+  'prodex': ['prodex', 'aislante terminco'],
+  'mallamax': ['mallamax', 'malla max', 'malla'],
+  'malla max': ['malla max', 'mallamax', 'malla'],
+  'hierro max': ['hierro max', 'hierromax', 'hierro'],
+  'galva deck': ['galva deck', 'galvadeck', 'entrepiso'],
+  'sun light': ['sun light', 'sunlight', 'lamina sunlight'],
+  'arquiteja': ['arquiteja', 'arquitectura', 'perfil arquiteja'],
+  'a+': ['a+', 'a plus'],
+  'autr': ['autr', 'autorroscante'],
+  'rjo': ['rjo', 'rojo'],
+  'blc': ['blc', 'blanco'],
+  'pdo': ['pdo', 'pintado'],
+  'pu': ['pu', 'puerta'],
+  'drch': ['drch', 'derecha'],
+  'iqda': ['iqda', 'izquierda'],
+  'ff': ['ff'],
+  'lisa': ['lisa', 'liso'],
+  'liso': ['liso', 'lisa'],
+  'crgdo': ['crgdo', 'corrugado'],
+  'com': ['com', 'comercial'],
+  'orig': ['orig', 'original'],
+  'mda': ['mda', 'a medida'],
+  'vll': ['vll', 'villa'],
+  'villa': ['villa', 'vll']
+};
+
+// ========== BUSQUEDA INTELIGENTE CON SINONIMOS ==========
+function normalizeText(text) {
+  if (!text) return '';
+  return text.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[''""`´]/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function expandToken(token) {
+  // Buscar en sinónimos
+  const normToken = normalizeText(token);
+  for (var key in SEARCH_SYNONYMS) {
+    var synonyms = SEARCH_SYNONYMS[key];
+    for (var i = 0; i < synonyms.length; i++) {
+      if (normalizeText(synonyms[i]) === normToken) {
+        return synonyms.map(function(s) { return normalizeText(s); });
+      }
+    }
+  }
+  return [normToken];
+}
+
+function getSearchTokens(query) {
+  var normalized = normalizeText(query);
+  var rawTokens = normalized.split(/\s+/).filter(function(t) { return t.length > 0; });
+  
+  var allTokens = [];
+  rawTokens.forEach(function(token) {
+    var expanded = expandToken(token);
+    allTokens = allTokens.concat(expanded);
+  });
+  
+  // Eliminar duplicados
+  var unique = [];
+  allTokens.forEach(function(t) {
+    if (unique.indexOf(t) === -1) unique.push(t);
+  });
+  return unique;
+}
+
+function productMatches(product, tokens) {
+  var codeNorm = normalizeText(product.code);
+  var descNorm = normalizeText(product.description);
+  var catNorm = normalizeText(product.category);
+  var fullText = codeNorm + ' ' + descNorm + ' ' + catNorm;
+  
+  // Cada token debe coincidir en alguna parte
+  return tokens.every(function(token) {
+    if (fullText.includes(token)) return true;
+    
+    // Sin guiones
+    var noHyphen = token.replace(/-/g, ' ');
+    if (noHyphen !== token && fullText.includes(noHyphen)) return true;
+    
+    // Sin espacios entre números y x
+    var compactDim = token.replace(/(\d)\s*x\s*(\d)/g, '$1x$2');
+    if (compactDim !== token && fullText.includes(compactDim)) return true;
+    
+    // Con espacios entre números y x
+    var spacedDim = token.replace(/(\d)x(\d)/g, '$1 x $2');
+    if (spacedDim !== token && fullText.includes(spacedDim)) return true;
+    
+    return false;
+  });
+}
+
+function scoreProduct(product, tokens) {
+  var score = 0;
+  var codeNorm = normalizeText(product.code);
+  var descNorm = normalizeText(product.description);
+  var catNorm = normalizeText(product.category);
+  
+  tokens.forEach(function(token) {
+    // Coincidencia exacta en código
+    if (codeNorm === token) score += 1000;
+    else if (codeNorm.startsWith(token + ' ') || codeNorm.startsWith(token + '-')) score += 500;
+    else if (codeNorm.includes(token)) score += 300;
+    
+    // Coincidencia en descripción
+    if (descNorm.startsWith(token + ' ')) score += 400;
+    else if (descNorm.includes(' ' + token + ' ')) score += 250;
+    else if (descNorm.includes(token)) score += 100;
+    
+    // Coincidencia en categoría
+    if (catNorm === token) score += 200;
+    else if (catNorm.includes(token)) score += 80;
+    
+    // Palabra completa en descripción
+    var wordBound = new RegExp('\\b' + token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    if (wordBound.test(descNorm)) score += 50;
+  });
+  
+  return score;
+}
+
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  var rawQuery = e.target.value.trim();
+  
+  if (!rawQuery) {
+    filteredProducts = allProducts.slice();
+    renderProducts();
+    return;
+  }
+  
+  var tokens = getSearchTokens(rawQuery);
+  
+  if (tokens.length === 0) {
+    filteredProducts = allProducts.slice();
+    renderProducts();
+    return;
+  }
+  
+  // Filtrar productos que coincidan con TODOS los tokens
+  var matches = allProducts.filter(function(p) {
+    return productMatches(p, tokens);
+  });
+  
+  // Ordenar por relevancia
+  matches.sort(function(a, b) {
+    return scoreProduct(b, tokens) - scoreProduct(a, tokens);
+  });
+  
+  filteredProducts = matches;
+  renderProducts();
+});
+
+// ========== MODAL VER PRECIOS ==========
+function openPriceModal(id) {
+  const p = allProducts.find(function(x) { return x.id === id; });
+  if (!p) return;
+  document.getElementById('priceModalTitle').textContent = p.description || 'Producto';
+  document.getElementById('priceModalCodeText').textContent = p.code || 'SIN CODIGO';
+  document.getElementById('priceModalDesc').textContent = p.description || 'Sin descripcion';
+  document.getElementById('viewPrice0').textContent = formatPrice(p.price);
+  document.getElementById('viewOrig3').textContent = formatPrice(p.price);
+  document.getElementById('viewPrice3').textContent = formatPrice(p.price * 0.97);
+  document.getElementById('viewOrig4').textContent = formatPrice(p.price);
+  document.getElementById('viewPrice4').textContent = formatPrice(p.price * 0.96);
+  document.getElementById('viewOrig5').textContent = formatPrice(p.price);
+  document.getElementById('viewPrice5').textContent = formatPrice(p.price * 0.95);
+  document.getElementById('priceModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closePriceModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('priceModal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// ========== MODAL DESCUENTO (CARRITO) ==========
+function openDiscountModal(id) {
+  const p = allProducts.find(function(x) { return x.id === id; });
+  if (!p) return;
+  const existing = carrito.find(function(c) { return c.id === id; });
+  if (existing) {
+    openEditCarritoModal(id);
+    return;
+  }
+  editingIndex = -1;
+  currentMode = 'carrito';
+  currentDiscountProduct = p;
+  selectedDiscount = 0;
+  currentQty = 1;
+  currentMeters = 1;
+
+  const code = p.code || '';
+  const isMeters = code.startsWith('12');
+
+  document.getElementById('discountModalTitle').textContent = 'Agregar al Carrito';
+  setupModalContent(p, isMeters, 0, 1, 1);
+
+  document.getElementById('discountModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+// ========== MODAL EDITAR CARRITO ==========
+function openEditCarritoModal(id) {
+  const p = allProducts.find(function(x) { return x.id === id; });
+  if (!p) return;
+  const idx = carrito.findIndex(function(c) { return c.id === id; });
+  if (idx < 0) return;
+
+  const item = carrito[idx];
+  editingIndex = idx;
+  currentMode = 'carrito';
+  currentDiscountProduct = p;
+  selectedDiscount = item.discount;
+  currentQty = item.qty || 1;
+  currentMeters = item.meters || 1;
+
+  const code = p.code || '';
+  const isMeters = code.startsWith('12');
+
+  document.getElementById('discountModalTitle').textContent = 'Editar Carrito';
+  setupModalContent(p, isMeters, item.discount, item.qty || 1, item.meters || 1);
+
+  document.getElementById('discountModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+// ========== MODAL DESCUENTO (LISTA) ==========
+function openListaDiscountModal(id) {
+  const p = allProducts.find(function(x) { return x.id === id; });
+  if (!p) return;
+  const existing = lista.find(function(c) { return c.id === id; });
+  if (existing) {
+    openEditListaModal(id);
+    return;
+  }
+  editingIndex = -1;
+  currentMode = 'lista';
+  currentDiscountProduct = p;
+  selectedDiscount = 0;
+
+  document.getElementById('discountModalTitle').textContent = 'Agregar a Lista';
+  document.getElementById('discountModalCodeText').textContent = p.code || 'SIN CODIGO';
+  document.getElementById('discountModalDesc').textContent = p.description || 'Sin descripcion';
+  document.getElementById('optPrice0').textContent = formatPrice(p.price);
+  document.getElementById('optOrig3').textContent = formatPrice(p.price);
+  document.getElementById('optPrice3').textContent = formatPrice(p.price * 0.97);
+  document.getElementById('optOrig4').textContent = formatPrice(p.price);
+  document.getElementById('optPrice4').textContent = formatPrice(p.price * 0.96);
+  document.getElementById('optOrig5').textContent = formatPrice(p.price);
+  document.getElementById('optPrice5').textContent = formatPrice(p.price * 0.95);
+  document.querySelectorAll('.discount-option').forEach(function(el) { el.classList.remove('selected'); });
+  document.querySelector('.discount-option[data-discount="0"]').classList.add('selected');
+
+  document.getElementById('quantitySection').style.display = 'none';
+  document.getElementById('metersSection').style.display = 'none';
+
+  document.getElementById('discountModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+// ========== MODAL EDITAR LISTA ==========
+function openEditListaModal(id) {
+  const p = allProducts.find(function(x) { return x.id === id; });
+  if (!p) return;
+  const idx = lista.findIndex(function(c) { return c.id === id; });
+  if (idx < 0) return;
+
+  const item = lista[idx];
+  editingIndex = idx;
+  currentMode = 'lista';
+  currentDiscountProduct = p;
+  selectedDiscount = item.discount;
+
+  document.getElementById('discountModalTitle').textContent = 'Editar Lista';
+  document.getElementById('discountModalCodeText').textContent = p.code || 'SIN CODIGO';
+  document.getElementById('discountModalDesc').textContent = p.description || 'Sin descripcion';
+  document.getElementById('optPrice0').textContent = formatPrice(p.price);
+  document.getElementById('optOrig3').textContent = formatPrice(p.price);
+  document.getElementById('optPrice3').textContent = formatPrice(p.price * 0.97);
+  document.getElementById('optOrig4').textContent = formatPrice(p.price);
+  document.getElementById('optPrice4').textContent = formatPrice(p.price * 0.96);
+  document.getElementById('optOrig5').textContent = formatPrice(p.price);
+  document.getElementById('optPrice5').textContent = formatPrice(p.price * 0.95);
+  document.querySelectorAll('.discount-option').forEach(function(el) { el.classList.remove('selected'); });
+  document.querySelector('.discount-option[data-discount="' + item.discount + '"]').classList.add('selected');
+
+  document.getElementById('quantitySection').style.display = 'none';
+  document.getElementById('metersSection').style.display = 'none';
+
+  document.getElementById('discountModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+// ========== CONFIGURAR CONTENIDO DEL MODAL ==========
+function setupModalContent(p, isMeters, discount, qty, meters) {
+  document.getElementById('discountModalCodeText').textContent = p.code || 'SIN CODIGO';
+  document.getElementById('discountModalDesc').textContent = p.description || 'Sin descripcion';
+  document.getElementById('optPrice0').textContent = formatPrice(p.price);
+  document.getElementById('optOrig3').textContent = formatPrice(p.price);
+  document.getElementById('optPrice3').textContent = formatPrice(p.price * 0.97);
+  document.getElementById('optOrig4').textContent = formatPrice(p.price);
+  document.getElementById('optPrice4').textContent = formatPrice(p.price * 0.96);
+  document.getElementById('optOrig5').textContent = formatPrice(p.price);
+  document.getElementById('optPrice5').textContent = formatPrice(p.price * 0.95);
+  document.querySelectorAll('.discount-option').forEach(function(el) { el.classList.remove('selected'); });
+  document.querySelector('.discount-option[data-discount="' + discount + '"]').classList.add('selected');
+
+  // NUEVA LOGICA: Solo codigos que empiezan con 12 usan metros
+  // Todos los demas usan cantidad (unidades)
+  document.getElementById('quantitySection').style.display = isMeters ? 'none' : 'block';
+  document.getElementById('metersSection').style.display = isMeters ? 'block' : 'none';
+
+  if (!isMeters) {
+    currentQty = qty;
+    document.getElementById('qtyInput').value = qty;
+    updateQtySubtotal();
+  }
+  if (isMeters) {
+    currentMeters = meters;
+    document.getElementById('metersInput').value = meters;
+    updateMetersSubtotal();
+  }
+}
+
+function selectDiscount(d) {
+  selectedDiscount = d;
+  document.querySelectorAll('.discount-option').forEach(function(el) { el.classList.remove('selected'); });
+  document.querySelector('.discount-option[data-discount="' + d + '"]').classList.add('selected');
+  updateQtySubtotal();
+  updateMetersSubtotal();
+}
+
+// ========== CONTROLES DE CANTIDAD ==========
+function changeQty(delta) {
+  currentQty = Math.max(1, currentQty + delta);
+  document.getElementById('qtyInput').value = currentQty;
+  updateQtySubtotal();
+}
+
+function updateQtySubtotal() {
+  const input = document.getElementById('qtyInput');
+  let val = parseInt(input.value) || 1;
+  if (val < 1) val = 1;
+  currentQty = val;
+  input.value = val;
+
+  if (currentDiscountProduct) {
+    const unitPrice = currentDiscountProduct.price * (1 - selectedDiscount / 100);
+    document.getElementById('qtySubtotal').textContent = formatPrice(unitPrice * currentQty);
+  }
+}
+
+// ========== CONTROLES DE METROS (solo teclado) ==========
+function updateMetersSubtotal() {
+  const input = document.getElementById('metersInput');
+  let val = parseFloat(input.value) || 0;
+  if (val <= 0) val = 0.01;
+  currentMeters = val;
+  input.value = val;
+
+  if (currentDiscountProduct) {
+    const unitPrice = currentDiscountProduct.price * (1 - selectedDiscount / 100);
+    document.getElementById('metersSubtotal').textContent = formatPrice(unitPrice * currentMeters);
+  }
+}
+
+function confirmDiscount() {
+  if (!currentDiscountProduct) return;
+  const p = currentDiscountProduct;
+  const code = p.code || '';
+  const isMeters = code.startsWith('12');
+
+  const unitPrice = p.price * (1 - selectedDiscount / 100);
+  let finalPrice = unitPrice;
+  let qty = 1;
+  let meters = null;
+
+  if (!isMeters) {
+    // Todos los codigos que NO empiezan con 12 usan cantidad
+    qty = currentQty;
+    finalPrice = unitPrice * qty;
+  } else {
+    // Solo codigos que empiezan con 12 usan metros
+    meters = currentMeters;
+    finalPrice = unitPrice * meters;
+    qty = meters;
+  }
+
+  const item = {
+    id: p.id, code: p.code, description: p.description,
+    originalPrice: p.price, discount: selectedDiscount,
+    unitPrice: unitPrice, finalPrice: finalPrice,
+    qty: qty, meters: meters
+  };
+
+  if (currentMode === 'lista') {
+    if (editingIndex >= 0) {
+      lista[editingIndex] = item;
+      showToast('Lista actualizada', 'success');
+    } else {
+      lista.push(item);
+      showToast('Agregado a la lista', 'success');
+    }
+    saveData(); renderProducts(); updateListaUI();
+  } else {
+    if (editingIndex >= 0) {
+      carrito[editingIndex] = item;
+      showToast('Carrito actualizado', 'success');
+    } else {
+      carrito.push(item);
+      showToast('Agregado al carrito', 'success');
+    }
+    saveData(); renderProducts(); updateCarritoUI();
+  }
+  closeDiscountModal();
+}
+
+function closeDiscountModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('discountModal').classList.remove('active');
+  document.body.style.overflow = '';
+  currentDiscountProduct = null;
+  currentMode = 'carrito';
+  currentQty = 1;
+  currentMeters = 1;
+  editingIndex = -1;
+}
+
+// ========== LISTA ==========
+function updateListaUI() {
+  const count = lista.length;
+  const badge = document.getElementById('listaCount');
+  badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none';
+  const items = document.getElementById('listaItems');
+  if (count === 0) {
+    items.innerHTML = '<div class="sidebar-empty">Tu lista esta vacia</div>';
+    document.getElementById('listaShareBtn').disabled = true;
+    document.getElementById('listaCopyBtn').style.display = 'none';
+  } else {
+    items.innerHTML = lista.map(function(item, i) {
+      return `
+      <div class="sidebar-item" onclick="openEditListaModal(${item.id})">
+        <div class="sidebar-item-info">
+          <div class="sidebar-item-code">${item.code || 'SIN CODIGO'}</div>
+          <div class="sidebar-item-desc">${item.description || 'Sin descripcion'}</div>
+          ${item.discount > 0 ? '<div class="sidebar-item-discount">-' + item.discount + '% descuento</div>' : ''}
+        </div>
+        <div class="sidebar-item-price-col">
+          <div class="sidebar-item-price">${formatPrice(item.finalPrice)}</div>
+          <button class="sidebar-item-remove" onclick="event.stopPropagation(); removeFromLista(${i})">&#128465;</button>
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('listaShareBtn').disabled = false;
+    document.getElementById('listaCopyBtn').style.display = 'block';
+  }
+  document.getElementById('listaTotal').textContent = formatPrice(lista.reduce(function(s, i) { return s + i.finalPrice; }, 0));
+}
+function removeFromLista(i) { lista.splice(i, 1); saveData(); renderProducts(); updateListaUI(); showToast('Quitado', 'warning'); }
+function copyListaToClipboard() {
+  if (!lista.length) return;
+  let text = 'Lista de Precios — Adonay Tobar\n\n';
+  lista.forEach(function(item, i) {
+    text += (i+1) + '. ' + (item.code || 'SIN CODIGO') + ' — ' + (item.description || 'Sin descripcion') + '\n';
+    text += '   Precio: ' + formatPrice(item.finalPrice) + '\n\n';
+  });
+  text += 'Total: ' + formatPrice(lista.reduce(function(s, i) { return s + i.finalPrice; }, 0));
+  navigator.clipboard.writeText(text).then(function() { showToast('Lista copiada', 'success'); }).catch(function() {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('Lista copiada', 'success');
+  });
+}
+function shareListaWhatsApp() {
+  if (!lista.length) return;
+  let msg = '*Lista de Precios — Adonay Tobar*\n\n';
+  lista.forEach(function(item, i) {
+    msg += (i+1) + '. *' + (item.code || 'SIN CODIGO') + '* — ' + (item.description || 'Sin descripcion') + '\n';
+    msg += '   *' + formatPrice(item.finalPrice) + '*\n\n';
+  });
+  msg += '*Total: ' + formatPrice(lista.reduce(function(s, i) { return s + i.finalPrice; }, 0)) + '*\n\n_Adonay Tobar_';
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
+
+// ========== CARRITO ==========
+function updateCarritoUI() {
+  const count = carrito.length;
+  const badge = document.getElementById('carritoCount');
+  badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none';
+  const items = document.getElementById('carritoItems');
+  if (count === 0) {
+    items.innerHTML = '<div class="sidebar-empty">Tu carrito esta vacio</div>';
+    document.getElementById('carritoShareBtn').disabled = true;
+  } else {
+    items.innerHTML = carrito.map(function(item, i) {
+      const code = item.code || '';
+      const isMeters = code.startsWith('12');
+      const isQty = !isMeters; // Todos los que no son 12 usan cantidad
+      let qtyDisplay = '';
+
+      if (isMeters) {
+        qtyDisplay = '<div class="sidebar-item-meta">' + item.meters + ' metros x ' + formatPrice(item.unitPrice) + '</div>';
+      } else if (isQty) {
+        qtyDisplay = '<div class="sidebar-item-meta">' + item.qty + ' unidades x ' + formatPrice(item.unitPrice) + '</div>';
+      }
+
+      return `
+      <div class="sidebar-item" onclick="openEditCarritoModal(${item.id})">
+        <div class="sidebar-item-info">
+          <div class="sidebar-item-code">${item.code || 'SIN CODIGO'}</div>
+          <div class="sidebar-item-desc">${item.description || 'Sin descripcion'}</div>
+          ${item.discount > 0 ? '<div class="sidebar-item-discount">-' + item.discount + '% descuento</div>' : ''}
+          ${qtyDisplay}
+        </div>
+        <div class="sidebar-item-price-col">
+          <div class="sidebar-item-price">${formatPrice(item.finalPrice)}</div>
+          ${isQty ? `
+          <div class="cart-qty-controls">
+            <button class="cart-qty-btn" onclick="event.stopPropagation(); updateCartQty(${i}, -1)">&#8722;</button>
+            <input type="number" class="cart-qty-value" value="${item.qty}" min="1" onchange="event.stopPropagation(); setCartQty(${i}, this.value)">
+            <button class="cart-qty-btn" onclick="event.stopPropagation(); updateCartQty(${i}, 1)">+</button>
+          </div>` : ''}
+          ${isMeters ? `
+          <div class="cart-qty-controls" style="width:100px;">
+            <input type="number" class="cart-qty-value" value="${item.meters}" min="0.01" step="0.01" style="width:100%;" onchange="event.stopPropagation(); setCartMeters(${i}, this.value)">
+          </div>` : ''}
+          <button class="sidebar-item-remove" onclick="event.stopPropagation(); removeFromCarrito(${i})">&#128465;</button>
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('carritoShareBtn').disabled = false;
+  }
+  document.getElementById('carritoTotal').textContent = formatPrice(carrito.reduce(function(s, i) { return s + i.finalPrice; }, 0));
+}
+
+// ========== EDITAR CANTIDADES EN CARRITO ==========
+function updateCartQty(index, delta) {
+  const item = carrito[index];
+  if (!item) return;
+  item.qty = Math.max(1, item.qty + delta);
+  item.finalPrice = item.unitPrice * item.qty;
+  saveData(); updateCarritoUI();
+}
+
+function setCartQty(index, value) {
+  const item = carrito[index];
+  if (!item) return;
+  let val = parseInt(value) || 1;
+  if (val < 1) val = 1;
+  item.qty = val;
+  item.finalPrice = item.unitPrice * item.qty;
+  saveData(); updateCarritoUI();
+}
+
+function setCartMeters(index, value) {
+  const item = carrito[index];
+  if (!item) return;
+  let val = parseFloat(value) || 0.01;
+  if (val <= 0) val = 0.01;
+  item.meters = val;
+  item.qty = val;
+  item.finalPrice = item.unitPrice * val;
+  saveData(); updateCarritoUI();
+}
+
+function removeFromCarrito(i) { 
+  carrito.splice(i, 1); 
+  saveData(); 
+  renderProducts(); 
+  updateCarritoUI(); 
+  showToast('Quitado', 'warning'); 
+}
+
+function shareCarritoWhatsApp() {
+  if (!carrito.length) return;
+  let msg = '*Carrito — Adonay Tobar*\n\n';
+  carrito.forEach(function(item, i) {
+    const code = item.code || '';
+    const isMeters = code.startsWith('12');
+    const isQty = !isMeters;
+
+    msg += (i+1) + '. *' + (item.code || 'SIN CODIGO') + '* — ' + (item.description || 'Sin descripcion') + '\n';
+    if (item.discount > 0) {
+      msg += '   ~~' + formatPrice(item.originalPrice) + '~~ → *' + formatPrice(item.unitPrice) + '* (-' + item.discount + '%)\n';
+    } else {
+      msg += '   *' + formatPrice(item.unitPrice) + '*\n';
+    }
+    if (isMeters) {
+      msg += '   ' + item.meters + ' metros = *' + formatPrice(item.finalPrice) + '*\n';
+    } else if (isQty) {
+      msg += '   ' + item.qty + ' unidades = *' + formatPrice(item.finalPrice) + '*\n';
+    } else {
+      msg += '   *' + formatPrice(item.finalPrice) + '*\n';
+    }
+    msg += '\n';
+  });
+  msg += '*Total: ' + formatPrice(carrito.reduce(function(s, i) { return s + i.finalPrice; }, 0)) + '*\n\n_Adonay Tobar_';
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
+
+// ========== SIDEBAR ==========
+let openSidebarType = null;
+
+function openSidebar(type) {
+  if (openSidebarType === type) {
+    closeSidebar(type);
+    return;
+  }
+  if (openSidebarType) {
+    closeSidebar(openSidebarType);
+  }
+  const overlay = document.getElementById(type + 'Overlay');
+  const sidebar = document.getElementById(type + 'Sidebar');
+  overlay.classList.add('active');
+  sidebar.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  openSidebarType = type;
+}
+
+function closeSidebar(type) {
+  const overlay = document.getElementById(type + 'Overlay');
+  const sidebar = document.getElementById(type + 'Sidebar');
+  overlay.classList.remove('active');
+  sidebar.classList.remove('active');
+  document.body.style.overflow = '';
+  openSidebarType = null;
+}
+
+function toggleSidebar(type) {
+  if (openSidebarType === type) {
+    closeSidebar(type);
+  } else {
+    openSidebar(type);
+  }
+}
+
+function saveData() {
+  localStorage.setItem('adonay_lista', JSON.stringify(lista));
+  localStorage.setItem('adonay_carrito', JSON.stringify(carrito));
+}
+
+// Iniciar carga
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Papa === 'undefined') {
+      const checkPapa = setInterval(function() {
+        if (typeof Papa !== 'undefined') { clearInterval(checkPapa); loadProducts(); }
+      }, 100);
+      setTimeout(function() { clearInterval(checkPapa); loadProducts(); }, 5000);
+    } else {
+      loadProducts();
+    }
+  });
+} else {
+  loadProducts();
+}
+
+setInterval(loadProducts, 5 * 60 * 1000);
+</script>
+</body>
+</html>
