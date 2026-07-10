@@ -508,7 +508,6 @@ function copyCode(el) {
   copyToClipboard(el.querySelector('span:first-child').textContent, el);
 }
 
-// ========== CARGAR CON PAPAPARSE ==========
 async function loadProducts() {
   try {
     const response = await fetch(SHEET_URL + '&t=' + Date.now());
@@ -525,7 +524,7 @@ async function loadProducts() {
       header: true,
       skipEmptyLines: true,
       transformHeader: function(h) {
-        return h.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        return h.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       },
       complete: function(results) {
         console.log('PapaParse rows:', results.data.length);
@@ -571,7 +570,7 @@ function parseCSVManual(csvText) {
     document.getElementById('productList').innerHTML = '<div class="no-results"><p>CSV vacio o invalido</p></div>';
     return;
   }
-  const headers = lines[0].split(',').map(function(h) { return h.trim().toLowerCase().replace(/[̀-ͯ]/g, ''); });
+  const headers = lines[0].split(',').map(function(h) { return h.trim().toLowerCase().replace(/[\u0300-\u036f]/g, ''); });
   allProducts = [];
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].split(',');
@@ -620,7 +619,6 @@ function renderProducts() {
   }).join('');
 }
 
-  // ========== DICCIONARIO DE SINONIMOS ==========
 var SEARCH_SYNONYMS = {
   'polin': ['polin', 'polin c', 'polin encaj', 'viga', 'viga encaj', 'polin ght', 'polin gfx'],
   'viga': ['viga', 'viga encaj', 'polin encaj', 'polin', 'viga ght'],
@@ -764,12 +762,6 @@ var SEARCH_SYNONYMS = {
   'redondo': ['redondo', 'redo'],
   'electro': ['electro', 'electrosoldada'],
   'p-63': ['p-63', 'p63'],
-  'c22': ['c22'],
-  'c20': ['c20'],
-  'c26': ['c26'],
-  'c24': ['c24'],
-  'e25': ['e25'],
-  'e40': ['e40'],
   '10/10': ['10/10', '3.43mm'],
   '6/6': ['6/6', '4.88mm'],
   '4/4': ['4/4', '5.72mm'],
@@ -953,23 +945,19 @@ var SEARCH_SYNONYMS = {
   'ff': ['ff']
 };
 
-// ========== BUSQUEDA INTELIGENTE CON SINONIMOS ==========
 function normalizeText(text) {
   if (!text) return '';
   return text.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[''""`´]/g, "'")
-    // Normalizar dimensiones: convertir "x" con comillas a x simple
+    .replace(/[''"`´]/g, "'")
     .replace(/(\d)['"]?\s*x\s*['"]?(\d)/g, '$1x$2')
-    // Normalizar pulgadas: convertir comillas después de número a nada (para búsqueda)
     .replace(/(\d)['"]/g, '$1')
-    // Normalizar guiones en fracciones
     .replace(/(\d)\s*-\s*(\d)/g, '$1-$2')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-  function getRelatedTerms(token) {
+function getRelatedTerms(token) {
   var normToken = normalizeText(token);
   var related = [normToken];
   
@@ -998,23 +986,6 @@ function normalizeText(text) {
   }
   
   return related;
-}
-
-  
-  // Si no está en sinónimos, buscar si algún sinónimo contiene el token
-  var matches = [];
-  for (var key2 in SEARCH_SYNONYMS) {
-    var synonyms2 = SEARCH_SYNONYMS[key2];
-    for (var j = 0; j < synonyms2.length; j++) {
-      if (normalizeText(synonyms2[j]).includes(normToken)) {
-        matches.push(normalizeText(key2));
-        break;
-      }
-    }
-  }
-  
-  if (matches.length > 0) return matches;
-  return [normToken];
 }
 
 function getSearchTokens(query) {
@@ -1112,7 +1083,6 @@ document.getElementById('searchInput').addEventListener('input', function(e) {
   renderProducts();
 });
 
-// ========== MODAL VER PRECIOS ==========
 function openPriceModal(id) {
   const p = allProducts.find(function(x) { return x.id === id; });
   if (!p) return;
@@ -1135,7 +1105,6 @@ function closePriceModal(e) {
   document.body.style.overflow = '';
 }
 
-// ========== MODAL DESCUENTO (CARRITO) ==========
 function openDiscountModal(id) {
   const p = allProducts.find(function(x) { return x.id === id; });
   if (!p) return;
@@ -1161,7 +1130,6 @@ function openDiscountModal(id) {
   document.body.style.overflow = 'hidden';
 }
 
-// ========== MODAL EDITAR CARRITO ==========
 function openEditCarritoModal(id) {
   const p = allProducts.find(function(x) { return x.id === id; });
   if (!p) return;
@@ -1186,7 +1154,6 @@ function openEditCarritoModal(id) {
   document.body.style.overflow = 'hidden';
 }
 
-// ========== MODAL DESCUENTO (LISTA) ==========
 function openListaDiscountModal(id) {
   const p = allProducts.find(function(x) { return x.id === id; });
   if (!p) return;
@@ -1220,7 +1187,6 @@ function openListaDiscountModal(id) {
   document.body.style.overflow = 'hidden';
 }
 
-// ========== MODAL EDITAR LISTA ==========
 function openEditListaModal(id) {
   const p = allProducts.find(function(x) { return x.id === id; });
   if (!p) return;
@@ -1253,7 +1219,6 @@ function openEditListaModal(id) {
   document.body.style.overflow = 'hidden';
 }
 
-// ========== CONFIGURAR CONTENIDO DEL MODAL ==========
 function setupModalContent(p, isMeters, discount, qty, meters) {
   document.getElementById('discountModalCodeText').textContent = p.code || 'SIN CODIGO';
   document.getElementById('discountModalDesc').textContent = p.description || 'Sin descripcion';
@@ -1267,8 +1232,6 @@ function setupModalContent(p, isMeters, discount, qty, meters) {
   document.querySelectorAll('.discount-option').forEach(function(el) { el.classList.remove('selected'); });
   document.querySelector('.discount-option[data-discount="' + discount + '"]').classList.add('selected');
 
-  // NUEVA LOGICA: Solo codigos que empiezan con 12 usan metros
-  // Todos los demas usan cantidad (unidades)
   document.getElementById('quantitySection').style.display = isMeters ? 'none' : 'block';
   document.getElementById('metersSection').style.display = isMeters ? 'block' : 'none';
 
@@ -1292,7 +1255,6 @@ function selectDiscount(d) {
   updateMetersSubtotal();
 }
 
-// ========== CONTROLES DE CANTIDAD ==========
 function changeQty(delta) {
   currentQty = Math.max(1, currentQty + delta);
   document.getElementById('qtyInput').value = currentQty;
@@ -1312,7 +1274,6 @@ function updateQtySubtotal() {
   }
 }
 
-// ========== CONTROLES DE METROS (solo teclado) ==========
 function updateMetersSubtotal() {
   const input = document.getElementById('metersInput');
   let val = parseFloat(input.value) || 0;
@@ -1338,11 +1299,9 @@ function confirmDiscount() {
   let meters = null;
 
   if (!isMeters) {
-    // Todos los codigos que NO empiezan con 12 usan cantidad
     qty = currentQty;
     finalPrice = unitPrice * qty;
   } else {
-    // Solo codigos que empiezan con 12 usan metros
     meters = currentMeters;
     finalPrice = unitPrice * meters;
     qty = meters;
@@ -1388,7 +1347,6 @@ function closeDiscountModal(e) {
   editingIndex = -1;
 }
 
-// ========== LISTA ==========
 function updateListaUI() {
   const count = lista.length;
   const badge = document.getElementById('listaCount');
@@ -1442,7 +1400,6 @@ function shareListaWhatsApp() {
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
-// ========== CARRITO ==========
 function updateCarritoUI() {
   const count = carrito.length;
   const badge = document.getElementById('carritoCount');
@@ -1455,7 +1412,7 @@ function updateCarritoUI() {
     items.innerHTML = carrito.map(function(item, i) {
       const code = item.code || '';
       const isMeters = code.startsWith('12');
-      const isQty = !isMeters; // Todos los que no son 12 usan cantidad
+      const isQty = !isMeters;
       let qtyDisplay = '';
 
       if (isMeters) {
@@ -1493,7 +1450,6 @@ function updateCarritoUI() {
   document.getElementById('carritoTotal').textContent = formatPrice(carrito.reduce(function(s, i) { return s + i.finalPrice; }, 0));
 }
 
-// ========== EDITAR CANTIDADES EN CARRITO ==========
 function updateCartQty(index, delta) {
   const item = carrito[index];
   if (!item) return;
@@ -1558,7 +1514,6 @@ function shareCarritoWhatsApp() {
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
-// ========== SIDEBAR ==========
 let openSidebarType = null;
 
 function openSidebar(type) {
@@ -1599,7 +1554,6 @@ function saveData() {
   localStorage.setItem('adonay_carrito', JSON.stringify(carrito));
 }
 
-// Iniciar carga
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof Papa === 'undefined') {
